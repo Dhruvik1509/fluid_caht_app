@@ -1,3 +1,7 @@
+import 'package:fluid_caht_app/modules/call/view/call_view.dart';
+import 'package:fluid_caht_app/modules/contact/view/contact_view.dart';
+import 'package:fluid_caht_app/modules/setting/seeting_view.dart';
+import 'package:fluid_caht_app/modules/status/view/status_view.dart';
 import 'package:flutter/material.dart';
 
 import '../chat/view/chat_view.dart';
@@ -14,10 +18,10 @@ class _InboxScreenState extends State<InboxScreen> {
 
   final List<Widget> _pages = [
     const ChatsPage(),
-    const ChatsPage(),
-    const ChatsPage(),
-    const ChatsPage(),
-    const ChatsPage(),
+    const ContactsView(),
+    StatusPage(),
+    CallsPage(),
+    ProfilePage()
   ];
 
   @override
@@ -27,12 +31,6 @@ class _InboxScreenState extends State<InboxScreen> {
 
     return Scaffold(
       body: _pages[_selectedIndex],
-      // Floating Action Button matching design
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {},
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        child: const Icon(Icons.edit, fill: 1.0),
-      ),
       // Bottom Navigation Bar using AppTheme colors
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
