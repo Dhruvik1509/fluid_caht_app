@@ -22,7 +22,7 @@ class AuthView extends StatelessWidget {
           // Uses appBarTheme from AppTheme (transparent bg, no elevation)
           elevation: 4,
           centerTitle: true,
-          leading: Icon(Icons.hub, color: colorScheme.primary),
+          leading: Icon(Icons.hub_outlined, color: colorScheme.primary),
           title: CustomText(
             "Connect",
             // Uses headlineSmall from AppTheme textTheme

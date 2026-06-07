@@ -53,7 +53,7 @@ class ProfilePage extends StatelessWidget {
       subtitle: 'Two-factor and data',
       icon: Icons.shield_outlined,
       iconBgColor: (cs) => cs.tertiaryFixed,
-      iconFgColor: (cs) => cs.onTertiaryFixedVariant,
+      iconFgColor: (cs) => cs.onTertiaryFixedVariant  ,
     ),
     _SettingItem(
       title: 'Appearance',

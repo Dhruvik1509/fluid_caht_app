@@ -61,7 +61,7 @@ class _ProfileSetupViewState extends State<ProfileSetupView> {
       appBar: AppBar(
         // Uses appBarTheme from AppTheme (transparent, no elevation, PlusJakartaSans title)
         centerTitle: true,
-        leading: Icon(Icons.hub, color: colorScheme.primary),
+        leading: Icon(Icons.hub_outlined, color: colorScheme.primary),
         title: const Text("Connect"),
       ),
 
@@ -188,6 +188,7 @@ class _ProfileSetupViewState extends State<ProfileSetupView> {
                     CustomTextFormField(
                       controller: nameController,
                       hintText: "How should we call you?",
+                      enabledBorderColor: Colors.transparent,
                     ),
 
                     const SizedBox(height: 24),
@@ -204,12 +205,11 @@ class _ProfileSetupViewState extends State<ProfileSetupView> {
                     const SizedBox(height: 8),
 
                     // Uses inputDecorationTheme from AppTheme automatically
-                    TextFormField(
+                    CustomTextFormField(
                       controller: bioController,
                       maxLines: 4,
-                      decoration: const InputDecoration(
                         hintText: "Tell the community a bit about yourself...",
-                      ),
+                      enabledBorderColor: Colors.transparent,
                     ),
 
                     const SizedBox(height: 32),

@@ -1,4 +1,5 @@
 import 'package:fluid_caht_app/modules/call/view/call_view.dart';
+import 'package:fluid_caht_app/modules/chat/view/chat_list_view.dart';
 import 'package:fluid_caht_app/modules/contact/view/contact_view.dart';
 import 'package:fluid_caht_app/modules/setting/seeting_view.dart';
 import 'package:fluid_caht_app/modules/status/view/status_view.dart';

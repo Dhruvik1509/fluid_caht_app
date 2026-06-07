@@ -190,7 +190,7 @@ class _ActionCard extends StatelessWidget {
                 width: 48,
                 height: 48,
                 decoration: BoxDecoration(
-                  color: cs.primaryFixed,
+                  color: cs.primaryFixed.withValues(alpha: 0.2),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(item.icon, color: cs.primary, size: 22),
@@ -229,7 +229,7 @@ class _TipCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: cs.secondaryFixed,
+        color: cs.primaryFixed.withValues(alpha: 0.2),
         borderRadius: BorderRadius.circular(16),
       ),
       child: Row(
@@ -248,7 +248,7 @@ class _TipCard extends StatelessWidget {
                 CustomText(
                   'Tip for sharing',
                   variant: CustomTextVariant.labelLarge,
-                  color: cs.onSecondaryFixedVariant,
+                  color: cs.primary,
                 ),
                 const SizedBox(height: 4),
                 // ✅ CustomText → bodyMedium (Inter 15 w400)
@@ -256,7 +256,7 @@ class _TipCard extends StatelessWidget {
                   'Statuses automatically disappear after 24 hours. '
                       'You can choose who sees your updates in settings.',
                   variant: CustomTextVariant.bodyMedium,
-                  color: cs.onSecondaryFixedVariant.withOpacity(0.80),
+                  color: cs.secondaryFixed.withOpacity(0.80),
                 ),
               ],
             ),

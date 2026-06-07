@@ -103,7 +103,7 @@ class _CallsPageState extends State<CallsPage> {
         scrolledUnderElevation: 1,
         leading: Padding(
           padding: const EdgeInsets.only(left: 16),
-          child: Icon(Icons.hub_rounded, color: cs.primary, size: 26),
+          child: Icon(Icons.hub_outlined, color: cs.primary, size: 26),
         ),
         // ✅ CustomText → headlineLarge (PlusJakartaSans 28 w700) + primary
         title: CustomText(
@@ -117,7 +117,7 @@ class _CallsPageState extends State<CallsPage> {
             onPressed: () {},
           ),
           IconButton(
-            icon: Icon(Icons.add_call, color: cs.onSurfaceVariant),
+            icon: Icon(Icons.add_ic_call_outlined, color: cs.onSurfaceVariant),
             onPressed: () {},
           ),
           const SizedBox(width: 4),
@@ -252,9 +252,9 @@ class _CallCard extends StatelessWidget {
   IconData get _actionIcon {
     switch (item.type) {
       case _CallType.videoOutgoing:
-        return Icons.videocam_rounded;
+        return Icons.videocam_outlined;
       default:
-        return Icons.call_rounded;
+        return Icons.call_outlined;
     }
   }
 

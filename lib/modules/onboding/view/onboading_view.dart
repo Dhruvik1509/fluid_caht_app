@@ -75,7 +75,7 @@ class _OnboardingViewState extends State<OnboardingView> {
                   currentPage == 0
                       ? Row(
                     children: [
-                      Icon(Icons.hub, color: colorScheme.primary),
+                      Icon(Icons.hub_outlined, color: colorScheme.primary),
                       const SizedBox(width: 10),
                       CustomText(
                         "Connect",
@@ -146,25 +146,38 @@ class _OnboardingViewState extends State<OnboardingView> {
               child: SizedBox(
                 height: 56,
                 width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: nextPage,
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        currentPage == pages.length - 1
-                            ? "Get Started"
-                            : "Next",
-                        // Uses onPrimary from colorScheme (white on primary bg)
-                        style: textTheme.bodyMedium?.copyWith(
-                          color: colorScheme.onPrimary,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 16,
+                child: GestureDetector(
+                  onTap: nextPage,
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 16,
+                      horizontal: 24,
+                    ),
+                    decoration: BoxDecoration(
+                      color: colorScheme.primary,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          currentPage == pages.length - 1
+                              ? "Get Started"
+                              : "Next",
+                          style: textTheme.bodyMedium?.copyWith(
+                            color: colorScheme.onPrimary,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 16,
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 8),
-                      Icon(Icons.arrow_forward, color: colorScheme.onPrimary),
-                    ],
+                        const SizedBox(width: 8),
+                        Icon(
+                          Icons.arrow_forward,
+                          color: colorScheme.onPrimary,
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),

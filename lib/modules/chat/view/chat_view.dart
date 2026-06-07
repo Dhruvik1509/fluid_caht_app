@@ -1,116 +1,103 @@
-// lib/modules/chats/chats_page.dart
+// lib/modules/chats/chat_detail_page.dart
 //
-// Updated to use CustomText (app_text.dart) + CustomTextFormField (app_text_filed.dart)
-// everywhere. All colors come from Theme — light/dark automatic.
+// Converted from the HTML "Chat Detail / Conversation" screen.
+// Uses CustomText (app_text.dart) + CustomTextFormField (app_text_filed.dart).
+// All colors from Theme.of(context).colorScheme — light/dark automatic.
+// Transactional page — pushed via Navigator (no BottomNav).
 
 import 'package:flutter/material.dart';
-import 'package:fluid_caht_app/core/widgets/app_text.dart';
-import 'package:fluid_caht_app/core/widgets/app_text_filed.dart';
 
-import '../model/Conversation.dart';
-import '../model/story.dart';
+import '../../../core/widgets/app_text.dart';
+import '../../../core/widgets/app_text_filed.dart';
 
-class ChatsPage extends StatefulWidget {
-  const ChatsPage({super.key});
+// ─── Message model ────────────────────────────────────────────────────────────
 
-  @override
-  State<ChatsPage> createState() => _ChatsPageState();
+enum _MsgType { incoming, outgoing, outgoingMedia, systemPill }
+
+class _Message {
+  final _MsgType type;
+  final String? text;
+  final String? time;
+  final bool isRead;       // double-tick blue vs grey
+  final String? imageUrl;  // outgoingMedia only
+  final String? pillText;  // systemPill only
+
+  const _Message({
+    required this.type,
+    this.text,
+    this.time,
+    this.isRead = false,
+    this.imageUrl,
+    this.pillText,
+  });
 }
 
-class _ChatsPageState extends State<ChatsPage> {
-  final TextEditingController _searchController = TextEditingController();
+// ─── Sample messages ──────────────────────────────────────────────────────────
 
-  final List<Story> _stories = [
-    Story(
-      name: 'Sarah',
-      initials: 'S',
-      avatarUrl:
-      'https://lh3.googleusercontent.com/aida-public/AB6AXuDTOM06jQRS193sPyfjpFN8X1NXca8w6Jb_Ul1Q0byObmZ1zkZKm9SrqK6fKRVe2twXKlQ8VV6r1sxHOnWnfcipoHnzPZZI5PYi8sI2buEFrKoA14Y0MTNBtzFr0J65603j-A5xhCihhLWqnk3Zz6olyWOXA5An3_9_3T0HRwQehHTISDoJANyg4GHShLWUKJcWir0Wx4Fag2hHnbTD9Ae6ab6a6nBRJhdaPavbzGMceKEG9ixdTWpX4QkD3H8OnGKSmZSCdbgb-JeR',
-    ),
-    Story(
-      name: 'David',
-      initials: 'D',
-      avatarUrl:
-      'https://lh3.googleusercontent.com/aida-public/AB6AXuDSzuQO93y_BinE1AllUGD6nuE12F2OglOjY4ZaKDguKPUKiFdum9R78UtjG9pmCGBZA77X1qIsWKKyyQddFsdrNWGNrE1SSAc4JAF1eRQO0srxJpgFWfBFMqDb7me8wC0GA9Wn-vrccuI39_IcwguNYTEtXogIr-nmQ0erKBBBiTmHEeKYL8rxPeBRqusmuOou9tGywciOW2u89l96WidBmwq9EZtYSt9GMqm7OvGG-0EN4Gldm4880mWPVMmS8HZY3qXr-HQd0oil',
-      isViewed: true,
-    ),
-    Story(
-      name: 'Elena',
-      initials: 'E',
-      avatarUrl:
-      'https://lh3.googleusercontent.com/aida-public/AB6AXuCOt1rzsQW6FC0XjxsvgzWDvmUg2m_yKkb0gNEl72QEKzH1GxCtR92YdrpO6QwmFiCCzYSHyP3G418bQ8mj_5qqxhgVbPxk_b80GfMsCLLpL7vkJWvaYfiE-cMVK410cJyeSMhWI_GTysOajiK3tfo8ae_uipoH064wdlXAqeFhkKTJpgXAzksSN55o6wuq2GYN0zrZMoHIbUV39LMeNyNlnU5_hmO8c-EtzmFpgfRmN-2nZ1ng4KQl-CrdeWBf3Qo2zD3Dd-i2rkyL',
-      isViewed: true,
-    ),
-    Story(
-      name: 'Marcus',
-      initials: 'M',
-      avatarUrl:
-      'https://lh3.googleusercontent.com/aida-public/AB6AXuD_m4z0jWLnmmEiNx0tOB5TSbg1Ud9-rvu6uv1Gy2vKwKJUhQe61IdZgFqKQV9V5TkxNFiNnGjq9tRSChdJkQTTeQJ-31Wf2vjD8xon0UAzvpfCYtw7BkHKULSCP_rDMLMC8NqdpIit0AgGZVNTASUL-YgoxnkBDCtCB-Xo0j9UUfN6Ayj5rb9Yu6Go3Oz8qQ-c1RPKPmdGtz_91bDGbdAucHMtxUgtQFp3svyedgeGnZw4lS4zxje9X_7KLkA-QQ3zlpwqF6ijE36I',
-      isViewed: true,
-    ),
-  ];
+final List<_Message> _messages = [
+  const _Message(
+    type: _MsgType.incoming,
+    text:
+    'Hey! Have you had a chance to review the new design system guidelines yet? I think the minimalist approach really works.',
+    time: '10:42 AM',
+  ),
+  const _Message(
+    type: _MsgType.outgoing,
+    text:
+    'Just finished reading them. The fluid grid model is exactly what we needed for the mobile experience. 🚀',
+    time: '10:45 AM',
+    isRead: true,
+  ),
+  const _Message(
+    type: _MsgType.outgoingMedia,
+    imageUrl: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=600',
+    text: "Here's a preview of the main interface card.",
+    time: '10:46 AM',
+    isRead: true,
+  ),
+  const _Message(
+    type: _MsgType.incoming,
+    text: 'That looks incredible. The tonal layering is spot on!',
+    time: '10:48 AM',
+  ),
+  const _Message(
+    type: _MsgType.systemPill,
+    pillText: 'Alex joined the secure workspace',
+  ),
+  const _Message(
+    type: _MsgType.outgoing,
+    text:
+    "I'll start implementing the input pill-shaped fields now. Should be ready for internal review by EOD. Let me know if you need anything else!",
+    time: '10:52 AM',
+    isRead: false, // sent but not read yet (grey double-tick)
+  ),
+];
 
-  final List<Conversation> _conversations = [
-    Conversation(
-      name: 'Sarah Wilson',
-      avatarUrl:
-      'https://lh3.googleusercontent.com/aida-public/AB6AXuBXpY7jGdz4MQ8rKVCLxzfYJmrvSEPTFoxHTwj7fzSyg9Jc0YEpP0xnaSF_mftpg5p4HWl8LhY4JWYU10Il38-1L_aEL08ng8wufjEYUvQPcw-ezhq47-ZmFamhl_0Vwtr4M4AXlTj8yIjtlZkelccIR8rxokqyqkEamjpkN3qN0b0RLhXoRTHcZT3do1Ic1A_Kkc1j4F2JjTEzIWFu7benYp3FKEhwQvZYpIPIRcwJS1nFeJzbbjvFouhVGZu6K3yRzU-n3MSImGPc',
-      initials: 'SW',
-      lastMessage: 'Can we review the final mockups?',
-      time: '12:45 PM',
-      isUnread: true,
-      unreadCount: 2,
-      isOnline: true,
-    ),
-    Conversation(
-      name: 'David Chen',
-      avatarUrl:
-      'https://lh3.googleusercontent.com/aida-public/AB6AXuAZ0nuLL10WjCrIkD8Ft15vz2dJhjr1djziMaXs3am-A8dfgbndu4LijbGJOzA6JUIM_MtwsQJn3ssLLnHEAegWnfVHz3T7VsoRFsV2H42mDgicgHaLzl-QBW8fFkLmX-cNdo1is9TY28NqLBnRyu0MjgahAf1Py8CNA4IJj7nx_0034SlV76r2FKY1n-jy_yxLm6LD3up7aJvRfe-goq6usU0iQK7v2eoMHmc0PKWcSIhImN_r7xHEzgqvrdvw_H9BYUABNQb6LJUE',
-      initials: 'DC',
-      lastMessage: 'The meeting has been rescheduled.',
-      time: 'Yesterday',
-      isUnread: false,
-      unreadCount: 0,
-      isOnline: false,
-    ),
-    Conversation(
-      name: 'Elena Rodriguez',
-      avatarUrl:
-      'https://lh3.googleusercontent.com/aida-public/AB6AXuC2D7dZmAktZ-PJL3BdtoR96iDUpwitB60aBsjJKLD0nQvYpjUAB2XU-tFLT_Z3mYPBbNrkWV6--qAKqiZhxG6y24Vw3FtYoi2ecEXgiCGipeSJySj-0vXTW0Ow8IjiYSvsVAvB224cF8ZAhDCZQP5a3OuVhlk9j0jAuwWZXNIUmKbUIljHX3CYmSRy3qelstKyoVb8hYdUmpFJMHWV3fCVip_RVYiliNCuAuityfJxVJX7z3OE9E7ShZJAxUEY2igbKna6jjrSCmGn',
-      initials: 'ER',
-      lastMessage: 'That\'s a great idea, let\'s do it!',
-      time: 'Oct 24',
-      isUnread: false,
-      unreadCount: 0,
-      isOnline: false,
-    ),
-    Conversation(
-      name: 'James Dalton',
-      avatarUrl: null,
-      initials: 'JD',
-      lastMessage: 'Sent an attachment',
-      time: '11:10 AM',
-      isUnread: true,
-      unreadCount: 1,
-      isOnline: true,
-    ),
-    Conversation(
-      name: 'Marcus Thorne',
-      avatarUrl:
-      'https://lh3.googleusercontent.com/aida-public/AB6AXuDvPM8NvksW4I165vQd0hsk8kyOUrexAnV253Tdvcq3U96ljjumtDpindDTTgqK2kU9XQYSa-XFovBucXxRU67SCmlG3IbARKqIUJEHMLvemTFWbnnSdyh3j1OjMumjtUMXOaF9uB8Jqnp2lBAWxI5CHK1JMj2QXkreVB3XtlDS2GMP_F2tOm6GL11qeji4syHiCZL_YT6GOwfEOX_7i0gZt65H2PfkovyWMI1nR3p6ovKjTTNYlCJOWXmQ7_UOJsQzR76Ej2y02TbI',
-      initials: 'MT',
-      lastMessage: 'Check out the new design system update.',
-      time: 'Oct 23',
-      isUnread: false,
-      unreadCount: 0,
-      isOnline: false,
-    ),
-  ];
+// ─── Main Screen ──────────────────────────────────────────────────────────────
+
+class ChatDetailPage extends StatefulWidget {
+  const ChatDetailPage({super.key});
+
+  @override
+  State<ChatDetailPage> createState() => _ChatDetailPageState();
+}
+
+class _ChatDetailPageState extends State<ChatDetailPage> {
+  final TextEditingController _msgController = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
 
   @override
   void dispose() {
-    _searchController.dispose();
+    _msgController.dispose();
+    _scrollController.dispose();
     super.dispose();
+  }
+
+  void _sendMessage() {
+    if (_msgController.text.trim().isEmpty) return;
+    // TODO: add to message list / send to backend
+    _msgController.clear();
+    setState(() {});
   }
 
   @override
@@ -118,210 +105,37 @@ class _ChatsPageState extends State<ChatsPage> {
     final cs = Theme.of(context).colorScheme;
 
     return Scaffold(
+      backgroundColor: cs.surface,
+      resizeToAvoidBottomInset: true,
+
+      // ── Top App Bar ────────────────────────────────────────────────────────
       appBar: AppBar(
-        // ✅ CustomText → headlineMedium + primary color
-        title: CustomText(
-          'Connect',
-          variant: CustomTextVariant.headlineMedium,
-          color: cs.primary,
+        backgroundColor: cs.surface.withOpacity(0.85),
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        scrolledUnderElevation: 1,
+        leadingWidth: 40,
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back_rounded, color: cs.onSurfaceVariant),
+          onPressed: () => Navigator.pop(context),
+          padding: EdgeInsets.zero,
         ),
-        leading: Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: CircleAvatar(
-            backgroundColor: cs.surfaceContainerHigh,
-            backgroundImage: const NetworkImage(
-              'https://lh3.googleusercontent.com/aida-public/AB6AXuA7sTemZ2TQQ9MypjPWYx6yLIxT9t4cQ07AcU19VMq18POA2IHvWZwweHABxXWH4KoRXNGKUpVIavrFFnYOlP7D5jNbTVWhC1BTwAekxhiqrzkqiPhAL2u_cafx6uS7AoSk3VHRbgUotXrLWxx4_jCrZWfB9YIL_ChgRzhi6AR_VmhdaMz99_VC4PTNW2uaLU6yGRpY3QtHMtjTSJkS0NCgkHsHo51N0OwsPyb2XzLfUqKQ6N78GHZvy-0RR4RaBGj8k4olkKGp2Mfn',
-            ),
-          ),
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.call_outlined),
-            onPressed: () {},
-            color: cs.primary,
-          ),
-          IconButton(
-            icon: const Icon(Icons.videocam_outlined),
-            onPressed: () {},
-            color: cs.primary,
-          ),
-          IconButton(
-            icon: const Icon(Icons.search),
-            color: cs.primary,
-            onPressed: () {},
-          ),
-        ],
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {},
-        backgroundColor: cs.primary,
-        child: Icon(Icons.edit, color: cs.onPrimary),
-      ),
-      body: CustomScrollView(
-        slivers: [
-          // ── Search Bar via CustomTextFormField ────────────────────────────
-          SliverPadding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-            sliver: SliverToBoxAdapter(
-              child: CustomTextFormField(
-                controller: _searchController,
-                hintText: 'Search conversations...',
-                prefixIcon: Icons.search,
-                borderRadius: 999, // pill
-                borderWidth: 1,
-                contentPadding:
-                const EdgeInsets.symmetric(vertical: 0, horizontal: 16),
-              ),
-            ),
-          ),
-
-          // ── Stories ───────────────────────────────────────────────────────
-          SliverPadding(
-            padding: const EdgeInsets.only(left: 20, right: 8, bottom: 24),
-            sliver: SliverToBoxAdapter(
-              child: SizedBox(
-                height: 88,
-                child: ListView.separated(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: _stories.length,
-                  separatorBuilder: (_, __) => const SizedBox(width: 16),
-                  itemBuilder: (context, index) {
-                    final story = _stories[index];
-                    return _StoryItem(story: story);
-                  },
+        title: Row(
+          children: [
+            // Avatar with online dot
+            Stack(
+              children: [
+                CircleAvatar(
+                  radius: 20,
+                  backgroundImage:
+                  const NetworkImage('https://i.pravatar.cc/150?img=47'),
                 ),
-              ),
-            ),
-          ),
-
-          // ── "Recent Conversations" header ─────────────────────────────────
-          SliverPadding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            sliver: SliverToBoxAdapter(
-              // ✅ CustomText → labelLarge (Inter 13 w600 tracking 0.05) + outline color
-              child: CustomText(
-                'RECENT CONVERSATIONS',
-                variant: CustomTextVariant.labelLarge,
-                color: Theme.of(context).colorScheme.outline,
-              ),
-            ),
-          ),
-          const SliverPadding(padding: EdgeInsets.only(top: 8)),
-
-          // ── Conversation list ─────────────────────────────────────────────
-          SliverList.separated(
-            itemCount: _conversations.length,
-            separatorBuilder: (_, __) => Padding(
-              padding: const EdgeInsets.only(left: 80),
-              child: Divider(
-                color: cs.outlineVariant,
-                thickness: 1,
-                height: 1,
-              ),
-            ),
-            itemBuilder: (context, index) =>
-                _ChatListItem(chat: _conversations[index]),
-          ),
-
-          const SliverPadding(padding: EdgeInsets.only(bottom: 10)),
-        ],
-      ),
-    );
-  }
-}
-
-// ─── Story Item ───────────────────────────────────────────────────────────────
-
-class _StoryItem extends StatelessWidget {
-  final Story story;
-  const _StoryItem({required this.story});
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-
-    return Column(
-      children: [
-        Container(
-          width: 64,
-          height: 64,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            border: Border.all(
-              color: story.isViewed ? cs.outlineVariant : cs.primary,
-              width: 2,
-            ),
-          ),
-          child: story.avatarUrl != null
-              ? CircleAvatar(
-            backgroundImage: NetworkImage(story.avatarUrl!),
-            backgroundColor: cs.surfaceContainerHigh,
-          )
-              : CircleAvatar(
-            backgroundColor: cs.secondaryContainer,
-            // ✅ CustomText → titleSmall + onSecondaryContainer
-            child: CustomText(
-              story.initials,
-              variant: CustomTextVariant.titleSmall,
-              color: cs.onSecondaryContainer,
-            ),
-          ),
-        ),
-        const SizedBox(height: 4),
-        // ✅ CustomText → labelMedium (Inter 12 w500)
-        //    color: onSurface if unviewed, onSurfaceVariant if viewed
-        CustomText(
-          story.name,
-          variant: CustomTextVariant.labelMedium,
-          color: story.isViewed ? cs.onSurfaceVariant : cs.onSurface,
-        ),
-      ],
-    );
-  }
-}
-
-// ─── Chat List Item ───────────────────────────────────────────────────────────
-
-class _ChatListItem extends StatelessWidget {
-  final Conversation chat;
-  const _ChatListItem({required this.chat});
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-      child: Row(
-        children: [
-          // ── Avatar ────────────────────────────────────────────────────────
-          Stack(
-            children: [
-              SizedBox(
-                width: 56,
-                height: 80, // ✅ fixed height (was 80/100 — layout crash)
-                child: chat.avatarUrl != null
-                    ? CircleAvatar(
-                  backgroundImage: NetworkImage(chat.avatarUrl!),
-                  backgroundColor: cs.surfaceContainerHigh,
-                )
-                    : CircleAvatar(
-                  backgroundColor: cs.secondaryContainer,
-                  // ✅ CustomText → titleMedium + onSecondaryContainer
-                  child: CustomText(
-                    chat.initials,
-                    variant: CustomTextVariant.titleMedium,
-                    color: cs.onSecondaryContainer,
-                  ),
-                ),
-              ),
-              if (chat.isOnline)
                 Positioned(
                   bottom: 0,
                   right: 0,
                   child: Container(
-                    width: 14,
-                    height: 14,
+                    width: 11,
+                    height: 11,
                     decoration: BoxDecoration(
                       color: Colors.green,
                       shape: BoxShape.circle,
@@ -329,88 +143,500 @@ class _ChatListItem extends StatelessWidget {
                     ),
                   ),
                 ),
-            ],
-          ),
-          const SizedBox(width: 16),
-
-          // ── Name / message / time / badge ─────────────────────────────────
-          Expanded(
-            child: Column(
+              ],
+            ),
+            const SizedBox(width: 10),
+            Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  children: [
-                    Expanded(
-                      // ✅ CustomText → titleMedium (PlusJakartaSans 17 w600)
-                      //    bold override when unread
-                      child: CustomText(
-                        chat.name,
-                        variant: CustomTextVariant.titleMedium,
-                        fontWeight: chat.isUnread
-                            ? FontWeight.w700
-                            : FontWeight.w600,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    // ✅ CustomText → labelMedium (Inter 12)
-                    //    primary if unread, onSurfaceVariant if read
-                    CustomText(
-                      chat.time,
-                      variant: CustomTextVariant.labelMedium,
-                      fontWeight: chat.isUnread
-                          ? FontWeight.w700
-                          : FontWeight.w500,
-                      color: chat.isUnread ? cs.primary : cs.onSurfaceVariant,
-                    ),
-                  ],
+                // ✅ CustomText → headlineMedium + primary
+                CustomText(
+                  'Connect',
+                  variant: CustomTextVariant.headlineMedium,
+                  color: cs.primary,
                 ),
-                const SizedBox(height: 4),
+                // ✅ CustomText → labelMedium + onSurfaceVariant
                 Row(
                   children: [
-                    Expanded(
-                      // ✅ CustomText → bodyMedium (Inter 15)
-                      //    onSurface+bold if unread, onSurfaceVariant if read
-                      child: CustomText(
-                        chat.lastMessage,
-                        variant: CustomTextVariant.bodyMedium,
-                        fontWeight: chat.isUnread
-                            ? FontWeight.w600
-                            : FontWeight.w400,
-                        color: chat.isUnread
-                            ? cs.onSurface
-                            : cs.onSurfaceVariant,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                    Container(
+                      width: 6,
+                      height: 6,
+                      margin: const EdgeInsets.only(right: 4),
+                      decoration: const BoxDecoration(
+                        color: Colors.green,
+                        shape: BoxShape.circle,
                       ),
                     ),
-                    // ── Unread badge ─────────────────────────────────────
-                    if (chat.unreadCount > 0)
-                      Padding(
-                        padding: const EdgeInsets.only(left: 8),
-                        child: Container(
-                          width: 20,
-                          height: 20,
-                          decoration: BoxDecoration(
-                            color: cs.primary,
-                            shape: BoxShape.circle,
-                          ),
-                          alignment: Alignment.center,
-                          // ✅ CustomText → labelSmall (Inter 11 w500)
-                          child: CustomText(
-                            '${chat.unreadCount}',
-                            variant: CustomTextVariant.labelSmall,
-                            color: cs.onPrimary,
-                          ),
-                        ),
-                      ),
+                    CustomText(
+                      'Online',
+                      variant: CustomTextVariant.labelMedium,
+                      color: cs.onSurfaceVariant,
+                    ),
                   ],
                 ),
               ],
             ),
+          ],
+        ),
+        actions: [
+          IconButton(
+            icon: Icon(Icons.call_outlined, color: cs.onSurfaceVariant),
+            onPressed: () {},
+          ),
+          IconButton(
+            icon: Icon(Icons.videocam_outlined, color: cs.onSurfaceVariant),
+            onPressed: () {},
+          ),
+          IconButton(
+            icon: Icon(Icons.search_rounded, color: cs.onSurfaceVariant),
+            onPressed: () {},
+          ),
+          IconButton(
+            icon: Icon(Icons.more_vert_rounded, color: cs.onSurfaceVariant),
+            onPressed: () {},
           ),
         ],
+      ),
+
+      // ── Body: message list ─────────────────────────────────────────────────
+      body: Column(
+        children: [
+          Expanded(
+            child: ListView.builder(
+              controller: _scrollController,
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+              itemCount: _messages.length + 1, // +1 for date pill at top
+              itemBuilder: (ctx, i) {
+                if (i == 0) return _DatePill(label: 'Today');
+                final msg = _messages[i - 1];
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: _buildMessage(msg, cs),
+                );
+              },
+            ),
+          ),
+
+          // ── Message composer ─────────────────────────────────────────────
+          _MessageComposer(
+            controller: _msgController,
+            onSend: _sendMessage,
+            onChanged: (_) => setState(() {}),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMessage(_Message msg, ColorScheme cs) {
+    switch (msg.type) {
+      case _MsgType.incoming:
+        return _IncomingBubble(msg: msg);
+      case _MsgType.outgoing:
+        return _OutgoingBubble(msg: msg);
+      case _MsgType.outgoingMedia:
+        return _OutgoingMediaBubble(msg: msg);
+      case _MsgType.systemPill:
+        return _SystemPill(text: msg.pillText ?? '');
+    }
+  }
+}
+
+// ─── Date Pill ────────────────────────────────────────────────────────────────
+
+class _DatePill extends StatelessWidget {
+  final String label;
+  const _DatePill({required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Center(
+      child: Container(
+        margin: const EdgeInsets.symmetric(vertical: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
+        decoration: BoxDecoration(
+          color: cs.surfaceContainer,
+          borderRadius: BorderRadius.circular(999),
+        ),
+        // ✅ CustomText → labelMedium + onSurfaceVariant
+        child: CustomText(
+          label,
+          variant: CustomTextVariant.labelMedium,
+          color: cs.onSurfaceVariant,
+        ),
+      ),
+    );
+  }
+}
+
+// ─── System Pill ──────────────────────────────────────────────────────────────
+
+class _SystemPill extends StatelessWidget {
+  final String text;
+  const _SystemPill({required this.text});
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Center(
+      child: Container(
+        margin: const EdgeInsets.symmetric(vertical: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          color: cs.surfaceContainerLow,
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(color: cs.outlineVariant),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.info_outline_rounded, size: 16, color: cs.primary),
+            const SizedBox(width: 6),
+            // ✅ CustomText → labelMedium + onSurface
+            Flexible(
+              child: CustomText(
+                text,
+                variant: CustomTextVariant.labelMedium,
+                color: cs.onSurface,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Incoming Bubble ──────────────────────────────────────────────────────────
+
+class _IncomingBubble extends StatelessWidget {
+  final _Message msg;
+  const _IncomingBubble({required this.msg});
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    // Light: #E9E9EB / Dark: surfaceContainerHigh
+    final bubbleBg =
+    isDark ? cs.surfaceContainerHigh : const Color(0xFFE9E9EB);
+    final bubbleText = isDark ? cs.onSurface : const Color(0xFF1C1C1E);
+
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxWidth: MediaQuery.of(context).size.width * 0.78,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                color: bubbleBg,
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(20),
+                  topRight: Radius.circular(20),
+                  bottomRight: Radius.circular(20),
+                  bottomLeft: Radius.circular(4), // "tail"
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              // ✅ CustomText → bodyMedium
+              child: CustomText(
+                msg.text ?? '',
+                variant: CustomTextVariant.bodyMedium,
+                color: bubbleText,
+              ),
+            ),
+            if (msg.time != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 4, left: 4),
+                // ✅ CustomText → labelMedium + outline
+                child: CustomText(
+                  msg.time!,
+                  variant: CustomTextVariant.labelMedium,
+                  color: cs.outline,
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Outgoing Bubble ──────────────────────────────────────────────────────────
+
+class _OutgoingBubble extends StatelessWidget {
+  final _Message msg;
+  const _OutgoingBubble({required this.msg});
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+
+    return Align(
+      alignment: Alignment.centerRight,
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxWidth: MediaQuery.of(context).size.width * 0.78,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                color: cs.primary,
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(20),
+                  topRight: Radius.circular(20),
+                  bottomLeft: Radius.circular(20),
+                  bottomRight: Radius.circular(4), // "tail"
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              // ✅ CustomText → bodyMedium + onPrimary
+              child: CustomText(
+                msg.text ?? '',
+                variant: CustomTextVariant.bodyMedium,
+                color: cs.onPrimary,
+              ),
+            ),
+            if (msg.time != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 4, right: 4),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // ✅ CustomText → labelMedium + outline
+                    CustomText(
+                      msg.time!,
+                      variant: CustomTextVariant.labelMedium,
+                      color: cs.outline,
+                    ),
+                    const SizedBox(width: 4),
+                    // Double tick — blue if read, grey if sent
+                    Icon(
+                      Icons.done_all_rounded,
+                      size: 14,
+                      color: msg.isRead ? cs.primary : cs.outline,
+                    ),
+                  ],
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Outgoing Media Bubble ────────────────────────────────────────────────────
+
+class _OutgoingMediaBubble extends StatelessWidget {
+  final _Message msg;
+  const _OutgoingMediaBubble({required this.msg});
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+
+    return Align(
+      alignment: Alignment.centerRight,
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxWidth: MediaQuery.of(context).size.width * 0.78,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            Container(
+              decoration: BoxDecoration(
+                color: cs.primary,
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(20),
+                  topRight: Radius.circular(20),
+                  bottomLeft: Radius.circular(20),
+                  bottomRight: Radius.circular(4),
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              clipBehavior: Clip.hardEdge,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Image
+                  if (msg.imageUrl != null)
+                    Image.network(
+                      msg.imageUrl!,
+                      width: 280,
+                      height: 160,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => Container(
+                        width: 280,
+                        height: 160,
+                        color: cs.primaryContainer,
+                      ),
+                    ),
+                  // Caption
+                  if (msg.text != null)
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(14, 8, 14, 10),
+                      // ✅ CustomText → bodyMedium + onPrimary
+                      child: CustomText(
+                        msg.text!,
+                        variant: CustomTextVariant.bodyMedium,
+                        color: cs.onPrimary,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            if (msg.time != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 4, right: 4),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    CustomText(
+                      msg.time!,
+                      variant: CustomTextVariant.labelMedium,
+                      color: cs.outline,
+                    ),
+                    const SizedBox(width: 4),
+                    Icon(
+                      Icons.done_all_rounded,
+                      size: 14,
+                      color: msg.isRead ? cs.primary : cs.outline,
+                    ),
+                  ],
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Message Composer ─────────────────────────────────────────────────────────
+
+class _MessageComposer extends StatelessWidget {
+  final TextEditingController controller;
+  final VoidCallback onSend;
+  final ValueChanged<String> onChanged;
+
+  const _MessageComposer({
+    required this.controller,
+    required this.onSend,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final hasText = controller.text.trim().isNotEmpty;
+
+    return Container(
+      color: cs.surface,
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 16),
+      child: Container(
+        decoration: BoxDecoration(
+          color: cs.surface.withOpacity(0.85),
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(color: cs.outlineVariant),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.07),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            // "+" attach button
+            IconButton(
+              icon: Icon(Icons.add_rounded, color: cs.onSurfaceVariant),
+              onPressed: () {},
+              padding: const EdgeInsets.all(8),
+              constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+            ),
+
+            // ✅ CustomTextFormField — pill composer input
+            Expanded(
+              child: CustomTextFormField(
+                controller: controller,
+                hintText: 'Message...',
+                onChanged: onChanged,
+                maxLines: 4,
+                minLines: 1,
+                borderRadius: 999,
+                borderWidth: 0,
+                fillColor: Colors.transparent,
+                enabledBorderColor: Colors.transparent,
+                focusedBorderColor: Colors.transparent,
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 4,
+                  vertical: 8,
+                ),
+              ),
+            ),
+
+            // Emoji button
+            IconButton(
+              icon: Icon(Icons.mood_rounded, color: cs.onSurfaceVariant),
+              onPressed: () {},
+              padding: const EdgeInsets.all(8),
+              constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+            ),
+
+            // Send button
+            Padding(
+              padding: const EdgeInsets.only(right: 4),
+              child: Material(
+                color: cs.primary,
+                shape: const CircleBorder(),
+                child: InkWell(
+                  customBorder: const CircleBorder(),
+                  onTap: onSend,
+                  child: SizedBox(
+                    width: 40,
+                    height: 40,
+                    child: Icon(
+                      Icons.send_rounded,
+                      size: 20,
+                      color: hasText ? cs.onPrimary : cs.onPrimary.withOpacity(0.7),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

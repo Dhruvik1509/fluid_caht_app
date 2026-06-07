@@ -308,7 +308,7 @@ class SelectContactModelRow extends StatelessWidget {
                         // ✅ CustomText → headlineMedium (PlusJakartaSans 20 w600)
                         CustomText(
                           contact.name,
-                          variant: CustomTextVariant.headlineMedium,
+                          variant: CustomTextVariant.displaySmall,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
