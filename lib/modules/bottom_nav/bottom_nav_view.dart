@@ -18,7 +18,7 @@ class _InboxScreenState extends State<InboxScreen> {
   int _selectedIndex = 0;
 
   final List<Widget> _pages = [
-    const ChatsPage(),
+    const ChatListView(),
     const ContactsView(),
     StatusPage(),
     CallsPage(),

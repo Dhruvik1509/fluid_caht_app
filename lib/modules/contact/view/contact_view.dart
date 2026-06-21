@@ -1,50 +1,9 @@
 import 'package:fluid_caht_app/modules/contact/view/select_contact_view.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_contacts/flutter_contacts.dart' as fc;
 import '../../../core/widgets/app_text.dart';
 import '../../../core/widgets/app_text_filed.dart';
 import '../model/contect_model.dart';
-
-
-
-// ─── Sample data (replace with your real data source) ─────────────────────────
-
-final Map<String, List<Contact>> ContactSections = {
-  'A': [
-    Contact(
-      name: 'Adrian Smith',
-      status: 'Available for collaboration',
-      avatarUrl: 'https://i.pravatar.cc/150?img=11',
-      isOnline: true,
-    ),
-    Contact(
-      name: 'Alisa Vonn',
-      status: 'Last seen 2h ago',
-      avatarUrl: 'https://i.pravatar.cc/150?img=5',
-    ),
-  ],
-  'B': [
-    Contact(
-      name: 'Benjamin Chen',
-      status: 'Busy • At the gym',
-      avatarUrl: 'https://i.pravatar.cc/150?img=12',
-    ),
-  ],
-  'D': [
-    Contact(
-      name: 'Diana Prince',
-      status: 'Online',
-      avatarUrl: 'https://i.pravatar.cc/150?img=9',
-      hasBlueDot: true,
-    ),
-  ],
-  'H': [
-    Contact(
-      name: 'Harrison Ford',
-      status: 'Away until Monday',
-      // no avatarUrl → shows initials
-    ),
-  ],
-};
 
 const List<String> _alphabetLetters = [
   'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H',
@@ -66,6 +25,91 @@ class _ContactsViewState extends State<ContactsView> {
   final TextEditingController _searchController = TextEditingController();
   String _query = '';
 
+  Map<String, List<Contact>> _contactSections = {};
+  bool _isLoading = true;
+  String? _errorMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadDeviceContacts();
+  }
+
+  Future<void> _loadDeviceContacts() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      // ── Permission request ──────────────────────────────────────────────
+      final status = await fc.FlutterContacts.permissions
+          .request(fc.PermissionType.readWrite);
+
+      if (status != fc.PermissionStatus.granted) {
+        setState(() {
+          _isLoading = false;
+          _errorMessage = 'Contacts permission denied';
+        });
+        return;
+      }
+
+      // ── Fetch all contacts with name, phone, thumbnail ──────────────────
+      final deviceContacts = await fc.FlutterContacts.getAll(
+        properties: {
+          fc.ContactProperty.name,
+          fc.ContactProperty.phone,
+          fc.ContactProperty.photoThumbnail,
+        },
+      );
+
+      // Group by first letter
+      final Map<String, List<Contact>> grouped = {};
+
+      for (final c in deviceContacts) {
+        final name = c.displayName ?? '';
+        if (name.isEmpty) continue;
+
+        final firstChar = name[0].toUpperCase();
+        final letter = RegExp(r'^[A-Z]$').hasMatch(firstChar) ? firstChar : '#';
+
+        final contact = Contact(
+          name: name,
+          status: c.phones.isNotEmpty ? c.phones.first.number : 'No phone number',
+          avatarUrl: null,
+          photo: c.photo?.thumbnail,
+          isOnline: false,
+        );
+
+        grouped.putIfAbsent(letter, () => []).add(contact);
+      }
+
+      // Sort each section alphabetically
+      grouped.forEach((key, list) {
+        list.sort((a, b) => a.name.compareTo(b.name));
+      });
+
+      // Sort keys (A-Z order, # at end)
+      final sortedKeys = grouped.keys.toList()
+        ..sort((a, b) {
+          if (a == '#') return 1;
+          if (b == '#') return -1;
+          return a.compareTo(b);
+        });
+      final sortedMap = {for (var k in sortedKeys) k: grouped[k]!};
+
+      setState(() {
+        _contactSections = sortedMap;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+        _errorMessage = 'Failed to load contacts: $e';
+      });
+    }
+  }
+
   @override
   void dispose() {
     _searchController.dispose();
@@ -74,10 +118,10 @@ class _ContactsViewState extends State<ContactsView> {
 
   // Filter contacts by search query
   Map<String, List<Contact>> get _filtered {
-    if (_query.isEmpty) return ContactSections;
+    if (_query.isEmpty) return _contactSections;
     final q = _query.toLowerCase();
     final result = <String, List<Contact>>{};
-    for (final entry in ContactSections.entries) {
+    for (final entry in _contactSections.entries) {
       final matches =
       entry.value.where((c) => c.name.toLowerCase().contains(q)).toList();
       if (matches.isNotEmpty) result[entry.key] = matches;
@@ -107,7 +151,6 @@ class _ContactsViewState extends State<ContactsView> {
             const NetworkImage('https://i.pravatar.cc/150?img=3'),
           ),
         ),
-        // ✅ CustomText → headlineMedium (PlusJakartaSans 20 w600) + primary color
         title: CustomText(
           'Connect',
           variant: CustomTextVariant.headlineMedium,
@@ -123,77 +166,131 @@ class _ContactsViewState extends State<ContactsView> {
       ),
 
       // ── Body ───────────────────────────────────────────────────────────────
-      body: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Main scrollable list
-          Expanded(
-            child: CustomScrollView(
-              slivers: [
-                // ── Search bar via CustomTextFormField ──────────────────────
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-                    child: CustomTextFormField(
-                      controller: _searchController,
-                      hintText: 'Search contacts...',
-                      prefixIcon: Icons.search_rounded,
-                      borderRadius: 999, // pill shape
-                      borderWidth: 1,
-                      fillColor: cs.surfaceContainerLow,
-                      contentPadding:
-                      const EdgeInsets.symmetric(vertical: 0, horizontal: 16),
-                      onChanged: (v) => setState(() => _query = v),
-                    ),
-                  ),
-                ),
-
-                // ── Alphabetical sections ───────────────────────────────────
-                for (final entry in _filtered.entries) ...[
-                  // Sticky letter header
-                  SliverPersistentHeader(
-                    pinned: true,
-                    delegate: _StickyLetterDelegate(
-                      letter: entry.key,
-                      surfaceColor: cs.surface,
-                    ),
-                  ),
-                  // Contact cards
-                  SliverPadding(
-                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-                    sliver: SliverList(
-                      delegate: SliverChildBuilderDelegate(
-                            (ctx, i) => Padding(
-                          padding: const EdgeInsets.only(bottom: 6),
-                          child: ContactCard(contact: entry.value[i]),
-                        ),
-                        childCount: entry.value.length,
-                      ),
-                    ),
-                  ),
-                ],
-
-                // Bottom padding so FAB doesn't obscure last item
-                const SliverToBoxAdapter(child: SizedBox(height: 96)),
-              ],
-            ),
-          ),
-
-          // Alphabet quick-scroll sidebar
-          _AlphabetSidebar(letters: _alphabetLetters),
-        ],
-      ),
+      body: _buildBody(cs),
 
       // ── FAB ────────────────────────────────────────────────────────────────
       floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          Navigator.push(context, MaterialPageRoute(builder: (context) => SelectContactPage(),));
+        onPressed: () async {
+          final result = await Navigator.push<bool>(
+            context,
+            MaterialPageRoute(builder: (context) => const SelectContactPage()),
+          );
+
+          // SelectContactPage પરથી પાછા આવ્યા + નવો contact add થયો → refresh
+          if (result == true) {
+            _loadDeviceContacts();
+          }
         },
         backgroundColor: cs.primary,
         foregroundColor: cs.onPrimary,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         child: const Icon(Icons.person_add_alt_rounded, size: 28),
       ),
+    );
+  }
+
+  Widget _buildBody(ColorScheme cs) {
+    // Loading state
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    // Error / permission denied state
+    if (_errorMessage != null) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.contacts_outlined, size: 48, color: cs.onSurfaceVariant),
+              const SizedBox(height: 16),
+              SecondaryText(
+                _errorMessage!,
+                variant: CustomTextVariant.bodyMedium,
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
+              FilledButton(
+                onPressed: _loadDeviceContacts,
+                child: const Text('Try Again'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    // Empty state
+    if (_contactSections.isEmpty) {
+      return Center(
+        child: SecondaryText(
+          'No contacts found',
+          variant: CustomTextVariant.bodyMedium,
+        ),
+      );
+    }
+
+    // Loaded contacts list
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Main scrollable list
+        Expanded(
+          child: CustomScrollView(
+            slivers: [
+              // ── Search bar via CustomTextFormField ──────────────────────
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                  child: CustomTextFormField(
+                    controller: _searchController,
+                    hintText: 'Search contacts...',
+                    prefixIcon: Icons.search_rounded,
+                    borderRadius: 999, // pill shape
+                    borderWidth: 1,
+                    fillColor: cs.surfaceContainerLow,
+                    contentPadding:
+                    const EdgeInsets.symmetric(vertical: 0, horizontal: 16),
+                    onChanged: (v) => setState(() => _query = v),
+                  ),
+                ),
+              ),
+
+              // ── Alphabetical sections ───────────────────────────────────
+              for (final entry in _filtered.entries) ...[
+                // Sticky letter header
+                SliverPersistentHeader(
+                  pinned: true,
+                  delegate: _StickyLetterDelegate(
+                    letter: entry.key,
+                    surfaceColor: cs.surface,
+                  ),
+                ),
+                // Contact cards
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                  sliver: SliverList(
+                    delegate: SliverChildBuilderDelegate(
+                          (ctx, i) => Padding(
+                        padding: const EdgeInsets.only(bottom: 6),
+                        child: ContactCard(contact: entry.value[i]),
+                      ),
+                      childCount: entry.value.length,
+                    ),
+                  ),
+                ),
+              ],
+
+              // Bottom padding so FAB doesn't obscure last item
+              const SliverToBoxAdapter(child: SizedBox(height: 96)),
+            ],
+          ),
+        ),
+
+        // Alphabet quick-scroll sidebar
+        _AlphabetSidebar(letters: _alphabetLetters, sections: _contactSections),
+      ],
     );
   }
 }
@@ -221,7 +318,6 @@ class _StickyLetterDelegate extends SliverPersistentHeaderDelegate {
       color: surfaceColor.withOpacity(0.95),
       padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
       alignment: Alignment.centerLeft,
-      // ✅ PrimaryText → labelLarge (Inter 13 w600 + primary color)
       child: PrimaryText(
         letter,
         variant: CustomTextVariant.labelLarge,
@@ -254,25 +350,19 @@ class ContactCard extends StatelessWidget {
           padding: const EdgeInsets.all(12),
           child: Row(
             children: [
-              // Avatar with optional online dot
               _Avatar(contact: contact),
               const SizedBox(width: 12),
-
-              // Name + status
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // ✅ CustomText → titleSmall (PlusJakartaSans 15 w600)
                     CustomText(
                       contact.name,
                       variant: CustomTextVariant.titleSmall,
-                      // titleSmall uses onSurface by default from textTheme
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 2),
-                    // ✅ SecondaryText → bodySmall (Inter 13) + onSurfaceVariant
                     SecondaryText(
                       contact.status,
                       variant: CustomTextVariant.bodySmall,
@@ -282,8 +372,6 @@ class ContactCard extends StatelessWidget {
                   ],
                 ),
               ),
-
-              // ✅ Blue "Online" dot on the right (primary color)
               if (contact.hasBlueDot) ...[
                 const SizedBox(width: 8),
                 Container(
@@ -303,7 +391,7 @@ class ContactCard extends StatelessWidget {
   }
 }
 
-// ─── Avatar (image or initials) ───────────────────────────────────────────────
+// ─── Avatar (image / device photo / initials) ─────────────────────────────────
 
 class _Avatar extends StatelessWidget {
   final Contact contact;
@@ -311,34 +399,43 @@ class _Avatar extends StatelessWidget {
 
   String get _initials {
     final parts = contact.name.split(' ');
-    return parts.isNotEmpty ? parts[0][0].toUpperCase() : '?';
+    return parts.isNotEmpty && parts[0].isNotEmpty
+        ? parts[0][0].toUpperCase()
+        : '?';
   }
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
 
+    Widget avatarChild;
+
+    if (contact.photo != null) {
+      avatarChild = CircleAvatar(
+        radius: 24,
+        backgroundImage: MemoryImage(contact.photo!),
+      );
+    } else if (contact.avatarUrl != null) {
+      avatarChild = CircleAvatar(
+        radius: 24,
+        backgroundImage: NetworkImage(contact.avatarUrl!),
+      );
+    } else {
+      avatarChild = CircleAvatar(
+        radius: 24,
+        backgroundColor: cs.secondaryContainer,
+        child: CustomText(
+          _initials,
+          variant: CustomTextVariant.headlineSmall,
+          color: cs.onSecondaryContainer,
+        ),
+      );
+    }
+
     return Stack(
       clipBehavior: Clip.none,
       children: [
-        if (contact.avatarUrl != null)
-          CircleAvatar(
-            radius: 24,
-            backgroundImage: NetworkImage(contact.avatarUrl!),
-          )
-        else
-        // ✅ Initials via CustomText → headlineSmall + onSecondaryContainer
-          CircleAvatar(
-            radius: 24,
-            backgroundColor: cs.secondaryContainer,
-            child: CustomText(
-              _initials,
-              variant: CustomTextVariant.headlineSmall,
-              color: cs.onSecondaryContainer,
-            ),
-          ),
-
-        // Green "online" dot
+        avatarChild,
         if (contact.isOnline)
           Positioned(
             bottom: 0,
@@ -365,7 +462,8 @@ class _Avatar extends StatelessWidget {
 
 class _AlphabetSidebar extends StatelessWidget {
   final List<String> letters;
-  const _AlphabetSidebar({required this.letters});
+  final Map<String, List<Contact>> sections;
+  const _AlphabetSidebar({required this.letters, required this.sections});
 
   @override
   Widget build(BuildContext context) {
@@ -376,15 +474,13 @@ class _AlphabetSidebar extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: letters.map((l) {
-          final hasSection = ContactSections.containsKey(l);
+          final hasSection = sections.containsKey(l);
           return GestureDetector(
             onTap: () {
               // TODO: scroll to section '$l'
             },
             child: Padding(
               padding: const EdgeInsets.symmetric(vertical: 2),
-              // ✅ CustomText → labelSmall (Inter 11 w500)
-              //    primary color for letters that have contacts, muted otherwise
               child: CustomText(
                 l,
                 variant: CustomTextVariant.labelSmall,

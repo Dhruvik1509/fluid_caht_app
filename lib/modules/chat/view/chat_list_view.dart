@@ -1,23 +1,27 @@
 // lib/modules/chats/chats_page.dart
 
+import 'dart:typed_data';
 import 'package:fluid_caht_app/modules/chat/view/chat_view.dart';
+import 'package:fluid_caht_app/modules/contact/view/select_contact_view.dart';
 import 'package:flutter/material.dart';
 import 'package:fluid_caht_app/core/widgets/app_text.dart';
 import 'package:fluid_caht_app/core/widgets/app_text_filed.dart';
-
+import '../controller/conversation_repository.dart';
 import '../model/Conversation.dart';
 import '../model/story.dart';
 
-class ChatsPage extends StatefulWidget {
-  const ChatsPage({super.key});
+class ChatListView extends StatefulWidget {
+  const ChatListView({super.key});
 
   @override
-  State<ChatsPage> createState() => _ChatsPageState();
+  State<ChatListView> createState() => _ChatListState();
 }
 
-class _ChatsPageState extends State<ChatsPage> {
+class _ChatListState extends State<ChatListView> {
   final TextEditingController _searchController = TextEditingController();
+  final _repo = ConversationsRepository.instance;
 
+  // ── Stories (static) ──────────────────────────────────────────────────────
   final List<Story> _stories = [
     Story(
       name: 'Sarah',
@@ -48,7 +52,8 @@ class _ChatsPageState extends State<ChatsPage> {
     ),
   ];
 
-  final List<Conversation> _conversations = [
+  // ── Initial dummy conversations ───────────────────────────────────────────
+  final List<Conversation> _initialConversations = [
     Conversation(
       name: 'Sarah Wilson',
       avatarUrl:
@@ -106,6 +111,13 @@ class _ChatsPageState extends State<ChatsPage> {
   ];
 
   @override
+  void initState() {
+    super.initState();
+    // ── Seed initial data only if repo is empty ────────────────────────────
+    _repo.seedIfEmpty(_initialConversations);
+  }
+
+  @override
   void dispose() {
     _searchController.dispose();
     super.dispose();
@@ -149,80 +161,107 @@ class _ChatsPageState extends State<ChatsPage> {
           ),
         ],
       ),
-      // ✅ FAB → opens ChatDetailPage (new conversation)
+
+      // ── FAB → SelectContactPage ────────────────────────────────────────────
       floatingActionButton: FloatingActionButton(
         onPressed: () => Navigator.push(
           context,
-          MaterialPageRoute(builder: (_) => const ChatDetailPage()),
+          MaterialPageRoute(builder: (_) => const SelectContactPage()),
         ),
         backgroundColor: cs.primary,
         child: Icon(Icons.edit_outlined, color: cs.onPrimary),
       ),
-      body: CustomScrollView(
-        slivers: [
-          // ── Search Bar ────────────────────────────────────────────────────
-          SliverPadding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-            sliver: SliverToBoxAdapter(
-              child: CustomTextFormField(
-                controller: _searchController,
-                hintText: 'Search conversations...',
-                prefixIcon: Icons.search,
-                borderRadius: 999,
-                borderWidth: 1,
-                contentPadding:
-                const EdgeInsets.symmetric(vertical: 0, horizontal: 16),
-              ),
-            ),
-          ),
 
-          // ── Stories ───────────────────────────────────────────────────────
-          SliverPadding(
-            padding: const EdgeInsets.only(left: 20, right: 8, bottom: 24),
-            sliver: SliverToBoxAdapter(
-              child: SizedBox(
-                height: 88,
-                child: ListView.separated(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: _stories.length,
-                  separatorBuilder: (_, __) => const SizedBox(width: 16),
-                  itemBuilder: (context, index) =>
-                      _StoryItem(story: _stories[index]),
+      // ── Body: ValueListenableBuilder → auto-updates when repo changes ──────
+      body: ValueListenableBuilder<List<Conversation>>(
+        valueListenable: _repo.conversations,
+        builder: (context, conversations, _) {
+          // Search filter
+          final query = _searchController.text.toLowerCase();
+          final filtered = query.isEmpty
+              ? conversations
+              : conversations
+              .where((c) => c.name.toLowerCase().contains(query))
+              .toList();
+
+          return CustomScrollView(
+            slivers: [
+              // ── Search Bar ──────────────────────────────────────────────
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                sliver: SliverToBoxAdapter(
+                  child: CustomTextFormField(
+                    controller: _searchController,
+                    hintText: 'Search conversations...',
+                    prefixIcon: Icons.search,
+                    borderRadius: 999,
+                    borderWidth: 1,
+                    contentPadding:
+                    const EdgeInsets.symmetric(vertical: 0, horizontal: 16),
+                    onChanged: (_) => setState(() {}), // search filter trigger
+                  ),
                 ),
               ),
-            ),
-          ),
 
-          // ── "Recent Conversations" header ─────────────────────────────────
-          SliverPadding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            sliver: SliverToBoxAdapter(
-              child: CustomText(
-                'RECENT CONVERSATIONS',
-                variant: CustomTextVariant.labelLarge,
-                color: cs.outline,
+              // ── Stories ─────────────────────────────────────────────────
+              SliverPadding(
+                padding: const EdgeInsets.only(left: 20, right: 8, bottom: 24),
+                sliver: SliverToBoxAdapter(
+                  child: SizedBox(
+                    height: 88,
+                    child: ListView.separated(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: _stories.length,
+                      separatorBuilder: (_, __) => const SizedBox(width: 16),
+                      itemBuilder: (context, index) =>
+                          _StoryItem(story: _stories[index]),
+                    ),
+                  ),
+                ),
               ),
-            ),
-          ),
-          const SliverPadding(padding: EdgeInsets.only(top: 8)),
 
-          // ── Conversation list ─────────────────────────────────────────────
-          SliverList.separated(
-            itemCount: _conversations.length,
-            separatorBuilder: (_, __) => Padding(
-              padding: const EdgeInsets.only(left: 80),
-              child: Divider(
-                color: cs.outlineVariant,
-                thickness: 1,
-                height: 1,
+              // ── "Recent Conversations" header ────────────────────────────
+              SliverPadding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                sliver: SliverToBoxAdapter(
+                  child: CustomText(
+                    'RECENT CONVERSATIONS',
+                    variant: CustomTextVariant.labelLarge,
+                    color: cs.outline,
+                  ),
+                ),
               ),
-            ),
-            itemBuilder: (context, index) =>
-                _ChatListItem(chat: _conversations[index]),
-          ),
+              const SliverPadding(padding: EdgeInsets.only(top: 8)),
 
-          const SliverPadding(padding: EdgeInsets.only(bottom: 10)),
-        ],
+              // ── Conversation list (live from repo) ───────────────────────
+              filtered.isEmpty
+                  ? SliverFillRemaining(
+                child: Center(
+                  child: CustomText(
+                    'No conversations found',
+                    variant: CustomTextVariant.bodyMedium,
+                    color: cs.onSurfaceVariant,
+                  ),
+                ),
+              )
+                  : SliverList.separated(
+                itemCount: filtered.length,
+                separatorBuilder: (_, __) => Padding(
+                  padding: const EdgeInsets.only(left: 80),
+                  child: Divider(
+                    color: cs.outlineVariant,
+                    thickness: 1,
+                    height: 1,
+                  ),
+                ),
+                itemBuilder: (context, index) =>
+                    _ChatListItem(chat: filtered[index]),
+              ),
+
+              const SliverPadding(padding: EdgeInsets.only(bottom: 80)),
+            ],
+          );
+        },
       ),
     );
   }
@@ -285,15 +324,14 @@ class _ChatListItem extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
 
     return InkWell(
-      // ✅ Tap → open ChatDetailPage for this conversation
       onTap: () => Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (_) => ChatDetailPage(
-            // Pass conversation data so ChatDetailPage can show
-            // the correct contact name, avatar, messages etc.
-            // (Add named params to ChatDetailPage constructor when
-            //  you wire up real data / state management)
+          builder: (_) => ChatView(
+            name: chat.name,
+            avatarUrl: chat.avatarUrl,
+            initials: chat.initials,
+            isOnline: chat.isOnline,
           ),
         ),
       ),
@@ -301,16 +339,29 @@ class _ChatListItem extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
         child: Row(
           children: [
-            // ── Avatar ──────────────────────────────────────────────────────
+            // ── Avatar ────────────────────────────────────────────────────
             Stack(
               children: [
                 SizedBox(
                   width: 56,
-                  height: 56, // ✅ fixed — no overflow
+                  height: 56,
                   child: chat.avatarUrl != null
                       ? CircleAvatar(
                     backgroundImage: NetworkImage(chat.avatarUrl!),
                     backgroundColor: cs.surfaceContainerHigh,
+                  )
+                      : chat.isGroup
+                      ? CircleAvatar(
+                    backgroundColor: cs.tertiaryContainer,
+                    child: Icon(
+                      Icons.groups_rounded,
+                      color: cs.onTertiaryContainer,
+                      size: 28,
+                    ),
+                  )
+                      : chat.photo != null
+                      ? CircleAvatar(
+                    backgroundImage: MemoryImage(chat.photo!),
                   )
                       : CircleAvatar(
                     backgroundColor: cs.secondaryContainer,
@@ -321,7 +372,7 @@ class _ChatListItem extends StatelessWidget {
                     ),
                   ),
                 ),
-                if (chat.isOnline)
+                if (chat.isOnline && !chat.isGroup)
                   Positioned(
                     bottom: 0,
                     right: 0,
@@ -339,13 +390,18 @@ class _ChatListItem extends StatelessWidget {
             ),
             const SizedBox(width: 14),
 
-            // ── Name / message / time / badge ────────────────────────────────
+            // ── Name / message / time / badge ─────────────────────────────
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
                     children: [
+                      // Group icon badge before name
+                      if (chat.isGroup) ...[
+                        Icon(Icons.lock_rounded, size: 13, color: cs.onSurfaceVariant),
+                        const SizedBox(width: 4),
+                      ],
                       Expanded(
                         child: CustomText(
                           chat.name,
@@ -364,9 +420,7 @@ class _ChatListItem extends StatelessWidget {
                         fontWeight: chat.isUnread
                             ? FontWeight.w700
                             : FontWeight.w500,
-                        color: chat.isUnread
-                            ? cs.primary
-                            : cs.onSurfaceVariant,
+                        color: chat.isUnread ? cs.primary : cs.onSurfaceVariant,
                       ),
                     ],
                   ),
